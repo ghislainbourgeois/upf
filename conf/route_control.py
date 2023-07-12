@@ -402,6 +402,8 @@ def parse_new_neighbor(msg):
 
         # Remove entry from unresolved arp cache
         del arpcache[neighbor_ip]
+    else:
+        print(f"Ignoring new neighbor {neighbor_ip}/{gateway_mac}")
 
 
 def parse_del_route(msg):
