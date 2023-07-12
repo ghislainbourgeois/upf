@@ -436,7 +436,7 @@ def parse_del_route(msg):
 
 
 def netlink_event_listener(ipdb, netlink_message, action):
-    print("Received a netlink event: {action} :: {netlink_message}")
+    print(f"Received a netlink event: {action} :: {netlink_message}")
 
     # If you get a netlink message, parse it
     msg = netlink_message
