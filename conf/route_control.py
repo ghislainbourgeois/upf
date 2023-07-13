@@ -12,8 +12,6 @@ from pyroute2 import IPDB, IPRoute
 
 from scapy.all import *
 
-sys.stdout = open("/routectl.log", "wt")
-
 try:
     from pybess.bess import *
 except ImportError:
@@ -53,6 +51,7 @@ def send_ping(neighbor_ip):
     Does not wait for a response. Expected to have the side
     effect of populating the arp table entry for neighbor_ip.
     """
+    print(f"Send ping to {neighbor_ip}")
     send(IP(dst=neighbor_ip) / ICMP())
 
 
@@ -64,9 +63,13 @@ def send_arp(neighbor_ip, src_mac, iface):
 
 
 def fetch_mac(dip):
+    print("============================================================================")
+    print(f"fetch_mac({dip})")
+    print("============================================================================")
     ip = ""
     _mac = ""
     neighbors = ipr.get_neighbours(dst=dip)
+    print(f"All neighbors: {neighbors}")
     for i in range(len(neighbors)):
         for att in neighbors[i]["attrs"]:
             if "NDA_DST" in att and dip == att[1]:
@@ -75,7 +78,13 @@ def fetch_mac(dip):
             if "NDA_LLADDR" in att:
                 # ('NDA_LLADDR', _mac)
                 _mac = att[1]
+                print(f"Found mac: {_mac}")
+                print(
+                    "============================================================================"
+                )
                 return _mac
+    print("Did not find mac")
+    print("============================================================================")
 
 
 def link_modules(server, module, next_module, ogate=0, igate=0):
@@ -88,10 +97,13 @@ def link_modules(server, module, next_module, ogate=0, igate=0):
         try:
             server.connect_modules(module, next_module, ogate, igate)
         except BESS.Error as e:
+            print(f"Got BESS.Error with code {e.code}")
             bess.resume_all()
             if e.code == errno.EBUSY:
+                print("Got code EBUSY, breaking")
                 break
             else:
+                print(f"Got unknown code, returning: {e}")
                 return  # raise
         except Exception as e:
             print(
@@ -101,6 +113,7 @@ def link_modules(server, module, next_module, ogate=0, igate=0):
             )
             time.sleep(SLEEP_S)
         else:
+            print("Try-else in link_modules")
             bess.resume_all()
             break
     else:
@@ -113,6 +126,7 @@ def link_modules(server, module, next_module, ogate=0, igate=0):
         return
         # raise Exception('BESS module connection ({}:{}->{}:{}) failure.'.
         #                format(module, ogate, igate, next_module))
+    print("Link module success?")
 
 
 def link_route_module(server, gateway_mac, item):
@@ -159,6 +173,7 @@ def link_route_module(server, gateway_mac, item):
             )
             time.sleep(SLEEP_S)
         else:
+            print("Adding IPLookupCommandAddArg success")
             bess.resume_all()
             break
     else:
@@ -181,6 +196,7 @@ def link_route_module(server, gateway_mac, item):
         bess.pause_all()
         for _ in range(MAX_RETRIES):
             try:
+                print(f"Inserting {update_module}")
                 server.create_module(
                     "Update",
                     update_module,
@@ -188,9 +204,12 @@ def link_route_module(server, gateway_mac, item):
                 )
             except BESS.Error as e:
                 bess.resume_all()
+                print(f"Got BESS error with code {e.code}")
                 if e.code == errno.EEXIST:
+                    print(f"Module {update_module} already exists")
                     break
                 else:
+                    print(f"Unknown error when inserting {update_module}: {e}")
                     return  # raise
             except Exception as e:
                 print(
@@ -200,6 +219,7 @@ def link_route_module(server, gateway_mac, item):
                 )
                 time.sleep(SLEEP_S)
             else:
+                print(f"Add Update module {update_module} success")
                 bess.resume_all()
                 break
         else:
@@ -211,9 +231,11 @@ def link_route_module(server, gateway_mac, item):
         print("Update module created")
 
         # Connect Update module to route module
+        print(f"Link module {route_module} to {update_module}")
         link_modules(server, route_module, update_module, gate_idx, 0)
 
         # Connect Update module to dpdk_out module
+        print(f"Link module {update_module} to {last_module}")
         link_modules(server, update_module, last_module, 0, 0)
 
         # Add a new neighbor in neighbor cache
@@ -238,6 +260,7 @@ def link_route_module(server, gateway_mac, item):
 
 
 def del_route_entry(server, item):
+    print(f"Deleting route entry for {item}")
     iprange = item.iprange
     prefix_len = item.prefix_len
     route_module = item.iface + "Routes"
