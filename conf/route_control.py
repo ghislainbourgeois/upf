@@ -12,6 +12,8 @@ from pyroute2 import IPDB, IPRoute
 
 from scapy.all import *
 
+sys.stdout = open("/routectl.log", "wt")
+
 try:
     from pybess.bess import *
 except ImportError:
