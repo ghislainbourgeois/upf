@@ -166,12 +166,13 @@ def link_route_module(server, gateway_mac, item):
                 "IPLookupCommandAddArg",
                 {"prefix": iprange, "prefix_len": int(prefix_len), "gate": gate_idx},
             )
-        except:
+        except Exception as e:
             print(
                 "Error adding route entry {}/{} in {}. Retrying in {}sec...".format(
                     iprange, prefix_len, route_module, SLEEP_S
                 )
             )
+            print(f"Exception was: {e}")
             time.sleep(SLEEP_S)
         else:
             print("Adding IPLookupCommandAddArg success")
@@ -184,7 +185,7 @@ def link_route_module(server, gateway_mac, item):
                 iprange, prefix_len, route_module
             )
         )
-        return
+        return False
         # raise Exception('BESS route entry ({}/{}) insertion failure in module {}'.
         #                format(iprange, prefix_len, route_module))
 
@@ -211,7 +212,7 @@ def link_route_module(server, gateway_mac, item):
                     break
                 else:
                     print(f"Unknown error when inserting {update_module}: {e}")
-                    return  # raise
+                    return False  # raise
             except Exception as e:
                 print(
                     "Error creating update module {}: {}. Retrying in {} secs...".format(
@@ -226,7 +227,7 @@ def link_route_module(server, gateway_mac, item):
         else:
             bess.resume_all()
             print("BESS module {} creation failure.".format(update_module))
-            return  # raise Exception('BESS module {} creation failure.'.
+            return False  # raise Exception('BESS module {} creation failure.'.
             #        format(update_module))
 
         print("Update module created")
@@ -424,10 +425,9 @@ def parse_new_neighbor(msg):
         )
 
         # Add route entry, and add item in the registered neighbor cache
-        link_route_module(bess, mac2hex(gateway_mac), item)
-
-        # Remove entry from unresolved arp cache
-        del arpcache[neighbor_ip]
+        if link_route_module(bess, mac2hex(gateway_mac), item):
+            # Remove entry from unresolved arp cache
+            del arpcache[neighbor_ip]
     else:
         print(f"Ignoring new neighbor {neighbor_ip}/{gateway_mac}")
 
