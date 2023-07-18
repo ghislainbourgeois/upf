@@ -5,6 +5,7 @@
 import argparse
 import signal
 import sys
+import threading
 import time
 
 # for retrieving neighbor info
@@ -528,6 +529,15 @@ def cleanup(number, frame):
     sys.exit()
 
 
+def ping_missing_entries():
+    while True:
+        print(f"Missing {len(arpcache)} ARP entries")
+        for ip in arpcache.keys():
+            print(f"Pinging {ip}")
+            send_ping(ip)
+        time.sleep(10)
+
+
 def main():
     global arpcache, neighborcache, modgatecnt, ipdb, event_callback, bess, ipr
     # for holding unresolved ARP queries
@@ -552,6 +562,9 @@ def main():
     print("Registering netlink event listener callback..."),
     event_callback = ipdb.register_callback(netlink_event_listener)
     print("Done.")
+
+    ping_missing = threading.Thread(target=ping_missing_entries, daemon=True)
+    ping_missing.start()
 
     signal.signal(signal.SIGHUP, reconfigure)
     signal.signal(signal.SIGINT, cleanup)
