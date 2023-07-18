@@ -530,6 +530,7 @@ def cleanup(number, frame):
 
 
 def ping_missing_entries():
+    print("Starting pinging thread")
     while True:
         print(f"Missing {len(arpcache)} ARP entries")
         for ip in arpcache.keys():
