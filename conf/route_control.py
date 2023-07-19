@@ -470,13 +470,16 @@ def netlink_event_listener(ipdb, netlink_message, action):
     msg = netlink_message
 
     if action == "RTM_NEWROUTE":
-        parse_new_route(msg)
+        with lock:
+            parse_new_route(msg)
 
     if action == "RTM_NEWNEIGH":
-        parse_new_neighbor(msg)
+        with lock:
+            parse_new_neighbor(msg)
 
     if action == "RTM_DELROUTE":
-        parse_del_route(msg)
+        with lock:
+            parse_del_route(msg)
 
 
 def bootstrap_routes():
@@ -506,20 +509,21 @@ def connect_bessd():
 
 def reconfigure(number, frame):
     print("Received: {} Reloading routes".format(number))
-    # clear arpcache
-    for ip in list(arpcache):
-        item = arpcache.get(ip)
-        del item
-    arpcache.clear()
-    for ip in list(neighborcache):
-        item = neighborcache.get(ip)
-        del item
-    neighborcache.clear()
-    for modname in list(modgatecnt):
-        item = modgatecnt.get(modname)
-        del item
-    modgatecnt.clear()
-    bootstrap_routes()
+    with lock:
+        # clear arpcache
+        for ip in list(arpcache):
+            item = arpcache.get(ip)
+            del item
+        arpcache.clear()
+        for ip in list(neighborcache):
+            item = neighborcache.get(ip)
+            del item
+        neighborcache.clear()
+        for modname in list(modgatecnt):
+            item = modgatecnt.get(modname)
+            del item
+        modgatecnt.clear()
+        bootstrap_routes()
     signal.pause()
 
 
@@ -532,15 +536,16 @@ def cleanup(number, frame):
 def ping_missing_entries():
     print("Starting pinging thread")
     while True:
-        print(f"Missing {len(arpcache)} ARP entries")
-        for ip in arpcache.keys():
-            print(f"Pinging {ip}")
-            send_ping(ip)
+        with lock:
+            print(f"Missing {len(arpcache)} ARP entries")
+            for ip in arpcache.keys():
+                print(f"Pinging {ip}")
+                send_ping(ip)
         time.sleep(10)
 
 
 def main():
-    global arpcache, neighborcache, modgatecnt, ipdb, event_callback, bess, ipr
+    global arpcache, neighborcache, modgatecnt, ipdb, event_callback, bess, ipr, lock
     # for holding unresolved ARP queries
     arpcache = {}
     # for holding list of registered neighbors
@@ -556,8 +561,11 @@ def main():
     # connect to bessd
     connect_bessd()
 
-    # program current routes
-    bootstrap_routes()
+    lock = threading.Lock()
+
+    with lock:
+        # program current routes
+        bootstrap_routes()
 
     # listen for netlink events
     print("Registering netlink event listener callback..."),
