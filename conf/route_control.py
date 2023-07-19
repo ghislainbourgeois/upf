@@ -64,13 +64,9 @@ def send_arp(neighbor_ip, src_mac, iface):
 
 
 def fetch_mac(dip):
-    print("============================================================================")
-    print(f"fetch_mac({dip})")
-    print("============================================================================")
     ip = ""
     _mac = ""
     neighbors = ipr.get_neighbours(dst=dip)
-    print(f"All neighbors: {neighbors}")
     for i in range(len(neighbors)):
         for att in neighbors[i]["attrs"]:
             if "NDA_DST" in att and dip == att[1]:
@@ -79,13 +75,7 @@ def fetch_mac(dip):
             if "NDA_LLADDR" in att:
                 # ('NDA_LLADDR', _mac)
                 _mac = att[1]
-                print(f"Found mac: {_mac}")
-                print(
-                    "============================================================================"
-                )
                 return _mac
-    print("Did not find mac")
-    print("============================================================================")
 
 
 def link_modules(server, module, next_module, ogate=0, igate=0):
@@ -114,7 +104,6 @@ def link_modules(server, module, next_module, ogate=0, igate=0):
             )
             time.sleep(SLEEP_S)
         else:
-            print("Try-else in link_modules")
             bess.resume_all()
             break
     else:
@@ -127,7 +116,6 @@ def link_modules(server, module, next_module, ogate=0, igate=0):
         return
         # raise Exception('BESS module connection ({}:{}->{}:{}) failure.'.
         #                format(module, ogate, igate, next_module))
-    print("Link module success?")
 
 
 def link_route_module(server, gateway_mac, item):
@@ -175,7 +163,6 @@ def link_route_module(server, gateway_mac, item):
             print(f"Exception was: {e}")
             time.sleep(SLEEP_S)
         else:
-            print("Adding IPLookupCommandAddArg success")
             bess.resume_all()
             break
     else:
@@ -190,7 +177,6 @@ def link_route_module(server, gateway_mac, item):
         #                format(iprange, prefix_len, route_module))
 
     if not neighbor_exists:
-        print("Neighbor does not exist")
         # Create Update module
         update_module = route_module + "DstMAC" + gateway_mac_str
 
@@ -357,7 +343,6 @@ def probe_addr(item, src_mac):
 
 
 def parse_new_route(msg):
-    print("Parsing new route")
     item = NeighborEntry()
     # Fetch prefix_len
     item.prefix_len = msg["dst_len"]
@@ -383,8 +368,6 @@ def parse_new_route(msg):
             # Fetch interface name
             # ('RTA_OIF', iface)
             item.iface = ipdb.interfaces[int(att[1])].ifname
-
-    print(f"Route parsed: {item}")
 
     if not item.iface in args.i or not item.iprange or not item.neighbor_ip:
         # Neighbor info is invalid
@@ -464,8 +447,6 @@ def parse_del_route(msg):
 
 
 def netlink_event_listener(ipdb, netlink_message, action):
-    print(f"Received a netlink event: {action} :: {netlink_message}")
-
     # If you get a netlink message, parse it
     msg = netlink_message
 
@@ -504,7 +485,7 @@ def connect_bessd():
     else:
         raise Exception("BESS connection failure.")
 
-    print("Done.")
+    print("Connected to BESS daemon")
 
 
 def reconfigure(number, frame):
